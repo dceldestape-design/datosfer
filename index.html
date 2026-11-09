@@ -1,0 +1,1573 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión Administrativa - D Castro PZ</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- SheetJS -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF & AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .tab-active {
+      border-bottom: 2px solid #2563eb;
+      color: #1d4ed8;
+      font-weight: 600;
+      background-color: #eff6ff;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            DC
+          </div>
+          <div>
+            <h1 class="text-base sm:text-lg font-bold text-slate-900 leading-tight">Distribuidora Hermanos Castro PZ</h1>
+            <p class="text-xs text-slate-500">Módulo Administrativo: CXC, Comisiones, Ventas y Catálogo API</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <button onclick="openApiModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs sm:text-sm font-semibold rounded-lg border border-indigo-200 transition-colors shadow-sm">
+            <i data-lucide="link-2" class="w-4 h-4 text-indigo-600"></i>
+            API Productos
+            <span id="api-status-pill" class="ml-1 px-1.5 py-0.2 bg-indigo-200 text-indigo-800 rounded-full text-[10px] font-bold">0</span>
+          </button>
+          <button onclick="openConfigModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-lg border border-slate-300 transition-colors shadow-sm">
+            <i data-lucide="sliders" class="w-4 h-4 text-blue-600"></i>
+            Reglas de Comisión
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 sm:space-x-2 -mb-px pt-1 overflow-x-auto">
+        <button id="tab-btn-txt" onclick="switchTab('txt')" class="tab-active py-2.5 px-3 text-xs sm:text-sm rounded-t-lg flex items-center gap-1.5 border-b-2 font-medium transition-colors whitespace-nowrap">
+          <i data-lucide="file-text" class="w-4 h-4 text-blue-600"></i>
+          1. Consolidado TXT
+        </button>
+        <button id="tab-btn-cxc" onclick="switchTab('cxc')" class="text-slate-500 hover:text-slate-700 py-2.5 px-3 text-xs sm:text-sm rounded-t-lg flex items-center gap-1.5 border-b-2 border-transparent font-medium transition-colors whitespace-nowrap">
+          <i data-lucide="receipt" class="w-4 h-4 text-slate-400"></i>
+          2. CXC - Solo Crédito
+        </button>
+        <button id="tab-btn-comisiones" onclick="switchTab('comisiones')" class="text-slate-500 hover:text-slate-700 py-2.5 px-3 text-xs sm:text-sm rounded-t-lg flex items-center gap-1.5 border-b-2 border-transparent font-medium transition-colors whitespace-nowrap">
+          <i data-lucide="percent" class="w-4 h-4 text-slate-400"></i>
+          3. Liquidación Comisiones
+        </button>
+
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: CONSOLIDADO VENTAS TXT (COL N Y M)  -->
+    <!-- ========================================== -->
+    <section id="tab-txt" class="space-y-6">
+      
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <i data-lucide="file-text" class="w-5 h-5 text-blue-600"></i>
+              Consolidado de Archivo export_ventas.txt
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Suma automáticamente la <strong>Columna N</strong> (con impuesto) y <strong>Columna M</strong> (subtotal) por vendedor y permite clasificación por categoría mediante la API.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="clearTxtData()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-semibold rounded-lg border border-rose-200 transition-colors shadow-sm">
+              <i data-lucide="trash-2" class="w-4 h-4 text-rose-600"></i>
+              Limpiar
+            </button>
+            <button onclick="loadActualTxtData()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs sm:text-sm font-semibold rounded-lg border border-blue-200 transition-colors shadow-sm">
+              <i data-lucide="sparkles" class="w-4 h-4 text-blue-600"></i>
+              Ver Datos Calculados (20.961 líneas)
+            </button>
+            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm">
+              <i data-lucide="upload" class="w-4 h-4"></i>
+              Seleccionar Archivo TXT
+              <input type="file" id="file-txt" accept=".txt,.csv" class="hidden" onchange="handleFileTXT(event)">
+            </label>
+          </div>
+        </div>
+
+        <div id="dropzone-txt" class="mt-4 border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer" onclick="document.getElementById('file-txt').click()">
+          <i data-lucide="file-up" class="w-8 h-8 text-blue-500 mx-auto mb-2"></i>
+          <p class="text-sm text-slate-700 font-medium">Haz clic o arrastra aquí tu archivo <span class="font-mono text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded font-semibold">export_ventas_20261104_dcastropz.txt</span></p>
+          <p class="text-xs text-slate-400 mt-1">Consumo directo del archivo delimitado por pipes (|) de 4.4 MB</p>
+        </div>
+      </div>
+
+      <!-- Dashboard Cards -->
+      <div id="txt-dashboard" class="space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-blue-600 tracking-wider">TOTAL GENERAL (COL N)</span>
+            <div id="txt-kpi-col-n" class="text-2xl font-extrabold text-blue-700 mt-1">₡111.474.166</div>
+            <span class="text-xs text-slate-500 mt-1 block">Ventas totales con impuesto</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-emerald-600 tracking-wider">TOTAL GENERAL (COL M)</span>
+            <div id="txt-kpi-col-m" class="text-2xl font-extrabold text-emerald-700 mt-1">₡106.519.472</div>
+            <span class="text-xs text-slate-500 mt-1 block">Subtotal sin impuesto</span>
+          </div>
+
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-slate-500 tracking-wider">LÍNEAS REGISTRADAS</span>
+            <div id="txt-kpi-lineas" class="text-2xl font-bold text-slate-900 mt-1">20.961</div>
+            <span class="text-xs text-slate-500 mt-1 block">Registros procesados</span>
+          </div>
+        </div>
+
+        <!-- Vendor Summary Table -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+            <h3 class="text-sm font-bold text-slate-800">Desglose de Ventas por Vendedor (Columna N y Columna M)</h3>
+            <button onclick="exportTxtSummaryExcel()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              Descargar Excel
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
+                <tr>
+                  <th class="p-3">Código</th>
+                  <th class="p-3">Vendedor</th>
+                  <th class="p-3 text-right">Líneas</th>
+                  <th class="p-3 text-right">Subtotal Columna M</th>
+                  <th class="p-3 text-right font-extrabold text-blue-900">Total Columna N (Con Impuesto)</th>
+                  <th class="p-3 text-right">% Participación</th>
+                </tr>
+              </thead>
+              <tbody id="txt-vendedores-tbody" class="divide-y divide-slate-100 font-mono">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Category Summary Table (Linked with API) -->
+        <div id="txt-category-card" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-indigo-600"></i>
+                Desglose de Ventas por Categoría (Según Mapeo API)
+              </h3>
+              <p class="text-xs text-slate-500">Mapeado automáticamente mediante <span class="font-mono text-indigo-600 font-semibold">pro_codigo</span> y <span class="font-mono text-indigo-600 font-semibold">det_catego</span></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <select id="txt-cat-vendor-filter" onchange="renderTxtCategorySummary()" class="text-xs rounded-lg border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white font-medium">
+                <option value="">Todos los Vendedores</option>
+              </select>
+              <button onclick="exportTxtCatExcel()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-colors">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                Excel Categorías
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-indigo-50 text-indigo-950 font-bold border-b border-indigo-200">
+                <tr>
+                  <th class="p-3 w-16">ID</th>
+                  <th class="p-3">Categoría</th>
+                  <th class="p-3 text-right">Líneas</th>
+                  <th class="p-3 text-right">Subtotal Columna M</th>
+                  <th class="p-3 text-right font-extrabold text-indigo-900 bg-indigo-100/50">Total Columna N (Con Impuesto)</th>
+                  <th class="p-3 text-right">% Participación</th>
+                </tr>
+              </thead>
+              <tbody id="txt-categorias-tbody" class="divide-y divide-slate-100 font-mono">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 2: CUENTAS POR COBRAR (SOLO CRÉDITO)   -->
+    <!-- ========================================== -->
+    <section id="tab-cxc" class="hidden space-y-6">
+      
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <i data-lucide="receipt" class="w-5 h-5 text-blue-600"></i>
+              Cuentas por Cobrar (Solo Facturas a Crédito)
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Excluye automáticamente contado y notas de contado. Monto único por factura.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="clearCXCData()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-semibold rounded-lg border border-rose-200 transition-colors shadow-sm">
+              <i data-lucide="trash-2" class="w-4 h-4 text-rose-600"></i>
+              Limpiar CXC
+            </button>
+            <button onclick="loadSampleCXC()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-lg border border-slate-300 transition-colors shadow-sm">
+              <i data-lucide="sparkles" class="w-4 h-4 text-blue-600"></i>
+              Ver Facturas Crédito Actuales
+            </button>
+            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              Seleccionar cxcEdades.xls
+              <input type="file" id="file-cxc" accept=".xls,.xlsx,.csv,.html" class="hidden" onchange="handleFileCXC(event)">
+            </label>
+          </div>
+        </div>
+
+        <div id="dropzone-cxc" class="mt-4 border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer" onclick="document.getElementById('file-cxc').click()">
+          <i data-lucide="file-up" class="w-8 h-8 text-blue-500 mx-auto mb-2"></i>
+          <p class="text-sm text-slate-700 font-medium">Haz clic o arrastra aquí tu archivo <span class="font-mono text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded font-semibold">cxcEdades20261109.xls</span></p>
+        </div>
+      </div>
+
+      <div id="cxc-dashboard" class="space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Total Cartera a Crédito</span>
+            <div id="cxc-total" class="text-2xl font-bold text-slate-900 mt-1">₡0</div>
+            <span id="cxc-count" class="text-xs text-slate-500 mt-1 block">0 facturas de crédito</span>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-blue-600 tracking-wider">Promedio por Factura</span>
+            <div id="cxc-promedio" class="text-2xl font-bold text-blue-700 mt-1">₡0</div>
+            <span class="text-xs text-slate-500 mt-1 block">Saldo medio por documento</span>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-emerald-600 tracking-wider">Vendedores con Cartera</span>
+            <div id="cxc-total-asesores" class="text-2xl font-bold text-emerald-700 mt-1">0</div>
+            <span class="text-xs text-slate-500 mt-1 block">Asesores con saldos activos</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="relative min-w-[260px]">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+              <input type="text" id="cxc-search" placeholder="Buscar cliente, factura o código..." oninput="filterCXCTable()" class="w-full pl-9 pr-3 py-1.5 text-xs sm:text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <select id="cxc-asesor-filter" onchange="filterCXCTable()" class="text-xs sm:text-sm rounded-lg border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium">
+              <option value="">Todos los Asesores</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="exportCXCExcel()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              Descargar Excel
+            </button>
+            <button onclick="exportCXCPDF()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+              Descargar PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto max-h-[600px]">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-200 text-slate-800 sticky top-0 z-10 font-bold border-b border-slate-300">
+                <tr>
+                  <th class="p-3 w-16">Código</th>
+                  <th class="p-3">Cliente</th>
+                  <th class="p-3">Establecimiento</th>
+                  <th class="p-3">Factura</th>
+                  <th class="p-3 text-center w-24">Cond. Fact</th>
+                  <th class="p-3 text-center w-24">Fecha Origen</th>
+                  <th class="p-3 text-right">Saldo Factura</th>
+                  <th class="p-3">Vendedor</th>
+                  <th class="p-3 text-center w-16">Tipo</th>
+                </tr>
+              </thead>
+              <tbody id="cxc-tbody" class="divide-y divide-slate-100 font-mono">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- TAB 3: LIQUIDACIÓN DE COMISIONES           -->
+    <!-- ========================================== -->
+    <section id="tab-comisiones" class="hidden space-y-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <i data-lucide="percent" class="w-5 h-5 text-blue-600"></i>
+              Liquidación de Comisiones por Vendedor
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Calcula la ejecución exacta y liquida comisiones con deducciones según la estructura A a I.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button onclick="clearComisionesData()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs sm:text-sm font-semibold rounded-lg border border-rose-200 transition-colors shadow-sm">
+              <i data-lucide="trash-2" class="w-4 h-4 text-rose-600"></i>
+              Limpiar Datos
+            </button>
+            <button onclick="loadSampleComisiones()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-semibold rounded-lg border border-slate-300 transition-colors shadow-sm">
+              <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+              Ver Datos Actuales
+            </button>
+            <label class="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors shadow-sm">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              Seleccionar vtacat.xls
+              <input type="file" id="file-comisiones" accept=".xls,.xlsx,.csv,.html" class="hidden" onchange="handleFileComisiones(event)">
+            </label>
+          </div>
+        </div>
+
+        <div id="dropzone-comisiones" class="mt-4 border-2 border-dashed border-slate-200 rounded-lg p-6 text-center hover:border-blue-400 hover:bg-blue-50/30 transition-all cursor-pointer" onclick="document.getElementById('file-comisiones').click()">
+          <i data-lucide="file-up" class="w-8 h-8 text-blue-500 mx-auto mb-2"></i>
+          <p class="text-sm text-slate-700 font-medium">Haz clic o arrastra aquí tu archivo <span class="font-mono text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded font-semibold">vtacat.xls...</span></p>
+        </div>
+      </div>
+
+      <div id="comisiones-dashboard" class="space-y-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Ventas Totales</span>
+            <div id="com-kpi-ventas" class="text-2xl font-bold text-slate-900 mt-1">₡0</div>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-blue-600 tracking-wider">Presupuesto Global</span>
+            <div id="com-kpi-presupuesto" class="text-2xl font-bold text-blue-700 mt-1">₡0</div>
+            <span id="com-kpi-ejecucion" class="text-xs font-semibold text-blue-600 mt-1 block">Ejecución: 0%</span>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-emerald-600 tracking-wider">Comisión Bruta (Col G)</span>
+            <div id="com-kpi-comision-bruta" class="text-2xl font-bold text-emerald-700 mt-1">₡0</div>
+          </div>
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-semibold uppercase text-indigo-600 tracking-wider">Comisión Neta (Col I)</span>
+            <div id="com-kpi-comision-neta" class="text-2xl font-bold text-indigo-700 mt-1">₡0</div>
+            <span id="com-kpi-deducciones" class="text-xs text-rose-500 mt-1 block font-medium">Deducciones: ₡0</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <select id="com-vendedor-filter" onchange="renderComisionesTable()" class="text-xs sm:text-sm rounded-lg border border-slate-300 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white font-medium">
+              <option value="">Todos los Vendedores</option>
+            </select>
+            <button onclick="openConfigModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs sm:text-sm font-semibold rounded-lg border border-blue-200 transition-colors">
+              <i data-lucide="settings-2" class="w-4 h-4"></i>
+              Configurar Metas y % por Categoría
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button onclick="exportComisionesExcel()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              Exportar Excel (A - I)
+            </button>
+            <button onclick="exportComisionesPDF()" class="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+              Exportar PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead class="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
+                <tr>
+                  <th class="p-3 w-36">A. Vendedor</th>
+                  <th class="p-3 w-48">B. Categoría</th>
+                  <th class="p-3 text-right">C. Ventas</th>
+                  <th class="p-3 text-right">D. Presupuesto</th>
+                  <th class="p-3 text-right">E. Ejecución</th>
+                  <th class="p-3 text-center w-24">F. % Comisión</th>
+                  <th class="p-3 text-right">G. Comisión Bruta</th>
+                  <th class="p-3 text-right w-28">H. Deducción</th>
+                  <th class="p-3 text-right font-bold text-slate-900 bg-slate-300/40">I. Comisión Neta</th>
+                </tr>
+              </thead>
+              <tbody id="comisiones-tbody" class="divide-y divide-slate-100 font-mono">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL: CONEXIÓN API PRODUCTOS & CATEGORÍAS -->
+  <!-- ========================================== -->
+  <div id="api-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+            <i data-lucide="link-2" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Sincronizar API de Productos</h3>
+            <p class="text-xs text-slate-500">Mapea <span class="font-mono text-indigo-600 font-bold">pro_codigo</span> con <span class="font-mono text-indigo-600 font-bold">det_catego</span></p>
+          </div>
+        </div>
+        <button onclick="closeApiModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Enlace / Cadena de la API</label>
+          <div class="flex gap-2">
+            <input type="url" id="api-url-input" placeholder="https://tu-api.com/api/productos..." class="flex-1 text-xs border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
+            <button onclick="fetchApiProducts()" id="btn-fetch-api" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm whitespace-nowrap flex items-center gap-1.5">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              Ejecutar
+            </button>
+          </div>
+        </div>
+
+        <div class="relative flex py-1 items-center">
+          <div class="flex-grow border-t border-slate-200"></div>
+          <span class="flex-shrink mx-3 text-slate-400 text-[10px] uppercase font-bold tracking-wider">o pegar respuesta JSON</span>
+          <div class="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">JSON de Productos (con pro_codigo y det_catego)</label>
+          <textarea id="api-json-input" rows="5" placeholder='[{"pro_codigo": "11262060", "det_catego": 5}, ...]' class="w-full text-xs font-mono border border-slate-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"></textarea>
+        </div>
+
+        <div id="api-sync-feedback" class="hidden text-xs p-3 rounded-lg"></div>
+      </div>
+
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+        <span id="api-items-count-label" class="text-xs text-slate-500 font-medium">0 productos mapeados</span>
+        <div class="flex items-center gap-2">
+          <button onclick="closeApiModal()" class="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold">
+            Cerrar
+          </button>
+          <button onclick="savePastedJson()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm">
+            Guardar Catálogo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: CONFIGURACIÓN DE REGLAS POR CATEGORÍA -->
+  <!-- ========================================== -->
+  <div id="config-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+            <i data-lucide="sliders" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900">Configuración de Reglas de Comisión</h3>
+            <p class="text-xs text-slate-500">Define el % de comisión y la meta mínima de ejecución por categoría</p>
+          </div>
+        </div>
+        <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-4 flex-1">
+        <p class="text-xs text-slate-600 bg-amber-50 border border-amber-200 p-3 rounded-lg leading-relaxed">
+          <strong class="text-amber-800">Regla de Cumplimiento:</strong> Si la ejecución real del vendedor en la categoría es mayor o igual a la <strong>Meta Mínima (%)</strong>, se liquidará el <strong>% de Comisión</strong> sobre sus ventas. Si no alcanza la meta, la comisión será ₡0.
+        </p>
+
+        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="bg-slate-100 text-slate-700 font-bold border-b border-slate-200">
+              <tr>
+                <th class="p-3">Categoría</th>
+                <th class="p-3 text-center w-32">Meta Mínima (%)</th>
+                <th class="p-3 text-center w-32">% Comisión</th>
+                <th class="p-3 text-center w-24">Activo</th>
+              </tr>
+            </thead>
+            <tbody id="config-rules-tbody" class="divide-y divide-slate-100">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+        <button onclick="resetDefaultRules()" class="text-xs text-slate-600 hover:text-slate-900 font-medium underline">
+          Restablecer Valores Predeterminados
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeConfigModal()" class="px-4 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-lg text-xs font-semibold transition-colors">
+            Cancelar
+          </button>
+          <button onclick="saveConfigRules()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
+            Guardar y Recalcular
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let cxcData = [];
+    let comisionesData = [];
+    let txtVendorSummary = [];
+    let txtCategorySummary = [];
+    let txtVendorCategoryMap = {};
+const DEFAULT_PRODUCT_CATEGORY_MAP = {"131615913": "1", "13215999": "17", "120227664": "5", "7401": "17", "06010031": "17", "30425": "17", "30423": "17", "30020": "17", "100": "4", "20027": "17", "20024": "17", "20021": "17", "20007": "17", "30410": "17", "12573223": "18", "12472641": "18", "125732235": "18", "12467801": "18", "12481062": "8", "12499746": "7", "12447842": "7", "12593104": "18", "12590440": "18", "12609796": "18", "12507573": "18", "12609258": "18", "12493147": "18", "12609534": "18", "12594435": "18", "12515762": "18", "12413863": "18", "12414574": "18", "12413407": "18", "12413408": "18", "12493294": "18", "888": "2", "125309721": "18", "123927561": "18", "124652851": "18", "124652841": "18", "126149781": "18", "126150061": "18", "12470443": "5", "13103995": "1", "13104080": "1", "13161591": "1", "12576490": "2", "12581682": "4", "12398169": "1", "12465285": "18", "124652853": "18", "12465592": "18", "12530387": "18", "12518207": "18", "125182073": "18", "12561924": "18", "12519573": "18", "12626790": "18", "12562066": "18", "12562046": "18", "12518313": "18", "12561744": "18", "12561753": "18", "12518212": "18", "125182123": "18", "12465284": "18", "124652843": "18", "12518208": "18", "12468575": "18", "13443483": "4", "12493762": "3", "12328194": "3", "12435386": "3", "12493301": "3", "12267854": "3", "12527251": "3", "12566074": "3", "12595869": "3", "12600273": "3", "12584266": "3", "12621007": "3", "14123430": "3", "12364645": "3", "12267852": "3", "12584412": "3", "12624585": "3", "12459600": "3", "12552777": "3", "12594085": "3", "12494979": "3", "13575935": "3", "12218005": "6", "12618418": "6", "12618432": "6", "12618433": "6", "06010054": "17", "12444214": "2", "12555970": "2", "12535501": "2", "12554469": "2", "12554456": "2", "12554468": "2", "12453906": "2", "12625993": "2", "12626010": "2", "12396892": "1", "12473664": "2", "12626011": "2", "14582": "17", "13406": "17", "14578": "17", "42009": "17", "12527302": "2", "12526304": "2", "12578668": "1", "12580154": "1", "12420020": "1", "12618089": "1", "12555534": "1", "14352794": "1", "12580153": "1", "12420036": "1", "11296072": "4", "74032": "17", "14263": "17", "12589790": "5", "12621156": "5", "12090013": "4", "12434371": "4", "12089991": "4", "12588410": "4", "12588460": "4", "12433586": "4", "12526289": "4", "12090011": "4", "12524055": "4", "12585846": "4", "14521251": "4", "14508719": "4", "12568932": "4", "12398086": "4", "12585853": "4", "12611621": "4", "12281075": "4", "12118198": "4", "12524418": "4", "13491095": "4", "124343481": "4", "11295985": "4", "12434348": "4", "12585862": "4", "12090002": "4", "12588352": "4", "12530458": "4", "12089558": "4", "12588328": "4", "12310013": "3", "13963782": "3", "12039446": "4", "12626484": "4", "12600465": "4", "13454228": "5", "12626474": "4", "11295498": "4", "12192071": "4", "11295495": "4", "413991": "17", "11296068": "4", "12472780": "4", "12612483": "4", "12472996": "4", "11295496": "4", "11295494": "4", "12496581": "2", "12612872": "2", "11296598": "4", "11295971": "4", "11296094": "4", "12323249": "4", "12393825": "18", "13508584": "4", "12627974": "4", "12470330": "4", "12473656": "4", "12580039": "4", "12475619": "4", "13657352": "4", "13536361": "4", "12608269": "4", "13443515": "4", "12573063": "4", "13769959": "4", "12473663": "4", "13666704": "4", "12473661": "4", "12470319": "4", "12474479": "4", "12470326": "4", "12470172": "4", "12470215": "4", "12627839": "4", "12525429": "18", "12612786": "18", "12560882": "18", "12612800": "18", "12478528": "18", "12531595": "18", "12536855": "18", "12398812": "18", "12404087": "18", "12398604": "18", "12536838": "18", "12398608": "18", "12526677": "18", "12530972": "18", "12407087": "18", "12478296": "18", "12477300": "18", "12478200": "18", "12525582": "18", "12554248": "18", "12612792": "18", "12398600": "18", "12536849": "18", "12554553": "18", "12477289": "18", "12478991": "18", "12554229": "18", "12554371": "18", "12554554": "18", "12408513": "18", "12478196": "18", "12392842": "18", "12392698": "18", "12392813": "18", "12392697": "18", "12414537": "18", "12392756": "18", "12528861": "1", "12486727": "1", "12409717": "1", "12561407": "1", "12410068": "1", "12627133": "1", "12581022": "1", "12409487": "1", "12425750": "18", "12572629": "5", "11262060": "5", "9999882": "5", "12612999": "5", "11050078": "18", "12514098": "18", "12514099": "18", "12514101": "18", "12562623": "18", "12433671": "18", "12614979": "18", "12370068": "18", "12562549": "18", "12562584": "18", "12446786": "18", "12362659": "18", "12576737": "18", "12614996": "18", "12614978": "18", "12592256": "18", "123662323": "18", "12615006": "18", "12592615": "18", "12562655": "18", "12562591": "18", "12562585": "18", "12370070": "18", "12562547": "18", "12562611": "18", "12615011": "18", "12592218": "18", "126005613": "18", "126005612": "18", "13543": "17", "12609059": "2", "12609061": "2", "12372843": "8", "12609125": "8", "12581219": "8", "12555023": "8", "12609114": "8", "12400166": "8", "12400050": "8", "12454118": "8", "12454228": "8", "12554543": "8", "12453698": "8", "12404478": "8", "12596404": "8", "12596421": "8", "12400703": "8", "12453715": "8", "12400165": "8", "12596456": "8", "12596447": "8", "12268905": "8", "12617305": "1", "13173": "17", "12520082": "4", "12520090": "4", "12276443": "4", "12630086": "2", "12604103": "2", "12495099": "2", "12629706": "2", "41011": "17", "41001": "17", "12595079": "5", "12556414": "5", "13900699": "5", "12553834": "5", "12022766": "5", "12471946": "5", "12527339": "5", "12502264": "5", "12625260": "3", "12450625": "4", "11295490": "4", "12565922": "1", "12782128": "1", "06010005": "17", "06010002": "17", "06010153": "17", "2500": "18", "12606393": "19", "12162887": "4", "13218": "17", "406446": "17", "406445": "17", "14097": "17", "13215": "17", "06010038": "17", "06010495": "17", "12609656": "8", "12611177": "8", "12609506": "8", "12450635": "8", "12512953": "8", "12449273": "8", "12504278": "8", "12472904": "8", "13995": "17", "13909": "17", "13852": "17", "11462166": "7", "11462175": "7", "8701733": "4", "12378699": "4", "12626508": "4", "12378693": "4", "12378720": "4", "12360245": "1", "12553895": "1", "12552359": "1", "12360085": "1", "12555965": "1", "12580832": "1", "12360357": "1", "12568544": "1", "12605148": "1", "12590592": "1", "12552371": "1", "12552380": "1", "12550062": "19", "12550072": "19", "12337422": "3", "12410572": "5", "12522540": "8", "12522531": "8", "12468070": "8", "12478832": "8", "12378572": "8", "12463902": "8", "12588472": "8", "12479087": "8", "12421769": "8", "11462165": "7", "11462168": "7", "12511260": "7", "12511254": "7", "12565912": "8", "12581436": "8", "12561229": "8", "12582420": "8", "12627307": "8", "12512247": "8", "12561039": "8", "12495507": "8", "12173138": "8", "12173135": "8", "12173136": "8", "12482383": "8", "12482384": "8", "12313415": "4", "14511125": "5", "12338554": "5", "12626896": "5", "13672832": "5", "1372832": "5", "12599607": "5", "12596163": "4", "14513461": "5", "13355": "17", "12576414": "18", "12559518": "18", "41014": "17", "41004": "17", "12627973": "4", "12621987": "1", "12459950": "18", "12447498": "18", "12459938": "18", "12450116": "18", "12505962": "18", "12470563": "18", "12468574": "18", "12470854": "18", "12468567": "18", "406327": "17", "406335": "17", "405481": "17", "4063651": "17", "406365": "17", "14762": "17", "405526": "17", "406242": "17", "406241": "17", "405510": "17", "405561": "17", "405468": "17", "06010488": "17", "889": "2", "12098978": "19", "12039065": "4", "14401": "17", "13306": "17", "406540": "17", "406512": "17", "405425": "17", "405503": "17", "06010035": "17", "06010066": "17", "06010061": "17", "406453": "17", "13746": "17", "06010004": "17", "06010023": "17", "06010098": "17", "06010101": "17", "06010032": "17", "06010030": "17", "12515640": "4", "12554991": "4", "13443445": "4", "14402380": "4", "12598051": "4", "12614873": "4", "12532579": "1", "12452624": "1", "7402": "17", "42010": "17", "42013": "17", "42002": "17", "42003": "17", "12542487": "4", "12542503": "4", "12542510": "4", "12600434": "4", "12616649": "4", "12593376": "4", "12530890": "4", "12260418": "4", "12076555": "4", "14386812": "4", "11296107": "4", "11296106": "4", "12536946": "4", "12537249": "4", "12115237": "4", "12536936": "4", "12555001": "4", "125372791": "4", "12537279": "4", "13554664": "4", "12537286": "4", "12549376": "1", "12604062": "3", "06010102": "17", "12803043": "18", "12595774": "18", "405219": "17", "41012": "17", "41002": "17"};
+    let storedMap = null;
+    try { storedMap = JSON.parse(localStorage.getItem('dhc_product_category_map')); } catch(e) {}
+    let productCategoryMap = (storedMap && Object.keys(storedMap).length > 0) ? storedMap : DEFAULT_PRODUCT_CATEGORY_MAP;
+
+    const CATEGORY_NAMES = {
+      '1': '1 - CAFE Y BEBIDAS',
+      '2': '2 - CONFITERIA',
+      '3': '3 - CPW',
+      '4': '4 - CULINARIOS',
+      '5': '5 - LACTEOS',
+      '6': '6 - MALHER',
+      '7': '7 - NATURES HEART',
+      '8': '8 - NUTRICION',
+      '17': '17 - ADICIONALES',
+      '18': '18 - Purina',
+      '19': '19 - CHOCO + CEREAL'
+    };
+
+    // Deductions from user spreadsheet
+    let vendedorDeductions = {
+      'DHC3 - OSCAR': 10040,
+      'DHC4 - DIEGO': 6735,
+      'DHC5 - MILTON': 9817,
+      'DHC1 - WAGNER': 0,
+      'DHC11 - VICTOR': 0
+    };
+
+    // Category Commission Rules
+    const defaultCategoryRules = {
+      '1 - CAFE Y BEBIDAS': { rate: 3.0, minExec: 90.0, active: true },
+      '17 - ADICIONALES': { rate: 2.0, minExec: 50.0, active: true },
+      '18 - Purina': { rate: 2.0, minExec: 85.0, active: true },
+      '19 - CHOCO + CEREAL': { rate: 1.0, minExec: 80.0, active: true },
+      '2 - CONFITERIA': { rate: 3.0, minExec: 80.0, active: true },
+      '3 - CPW': { rate: 3.0, minExec: 80.0, active: true },
+      '4 - CULINARIOS': { rate: 0.5, minExec: 90.0, active: true },
+      '5 - LACTEOS': { rate: 0.5, minExec: 80.0, active: true },
+      '6 - MALHER': { rate: 2.0, minExec: 90.0, active: true },
+      '7 - NATURES HEART': { rate: 1.0, minExec: 80.0, active: true },
+      '8 - NUTRICION': { rate: 1.0, minExec: 90.0, active: true }
+    };
+
+    let categoryRules = JSON.parse(localStorage.getItem('dhc_category_rules')) || JSON.parse(JSON.stringify(defaultCategoryRules));
+
+    lucide.createIcons();
+
+    function updateApiStatusPill() {
+      const count = Object.keys(productCategoryMap).length;
+      document.getElementById('api-status-pill').textContent = count;
+      document.getElementById('api-items-count-label').textContent = `${count.toLocaleString()} productos mapeados`;
+    }
+
+    function openApiModal() {
+      updateApiStatusPill();
+      document.getElementById('api-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeApiModal() {
+      document.getElementById('api-modal').classList.add('hidden');
+    }
+
+    function parseProductJsonOrNdjson(text) {
+      if (!text || typeof text !== 'string') return [];
+      text = text.trim();
+      if (!text) return [];
+
+      // 1. Intentar parsear como JSON estándar (Array u Objeto)
+      try {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) return parsed;
+        if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.data)) return parsed.data;
+          if (Array.isArray(parsed.items)) return parsed.items;
+          if (Array.isArray(parsed.productos)) return parsed.productos;
+          return [parsed];
+        }
+      } catch (e) {
+        // No es JSON estándar monolítico, proceder a parsear línea por línea (NDJSON)
+      }
+
+      // 2. Formato NDJSON o múltiples objetos separados por espacio o comas
+      text = text.replace(/\}\s*\{/g, '}\n{');
+      text = text.replace(/\}\s*,\s*\{/g, '}\n{');
+
+      const lines = text.split('\n');
+      const items = [];
+      for (let i = 0; i < lines.length; i++) {
+        let l = lines[i].trim();
+        if (!l) continue;
+        if (l.endsWith(',')) l = l.slice(0, -1).trim();
+        try {
+          const obj = JSON.parse(l);
+          if (obj && typeof obj === 'object') {
+            items.push(obj);
+          }
+        } catch (err) {
+          // Ignorar comentarios o líneas no válidas
+        }
+      }
+      return items;
+    }
+
+    async function fetchApiProducts() {
+      const url = document.getElementById('api-url-input').value.trim();
+      const feedback = document.getElementById('api-sync-feedback');
+      const btn = document.getElementById('btn-fetch-api');
+
+      if (!url) {
+        feedback.className = "text-xs p-3 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 block";
+        feedback.textContent = "Por favor ingresa la URL o cadena de la API.";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Conectando...';
+      lucide.createIcons();
+
+      feedback.className = "text-xs p-3 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 block";
+      feedback.textContent = "Conectando al servidor y descargando catálogo de productos...";
+
+      let rawText = '';
+      let fetchSuccess = false;
+
+      // 1. Intentar conexión directa
+      try {
+        const res = await fetch(url);
+        if (res.ok) {
+          rawText = await res.text();
+          fetchSuccess = true;
+        }
+      } catch (directErr) {
+        console.warn("Direct fetch falló (típicamente CORS), intentando proxy seguro de respaldo...", directErr);
+      }
+
+      // 2. Si falló por CORS, intentar proxy seguro de respaldo (AllOrigins)
+      if (!fetchSuccess) {
+        feedback.textContent = "CORS detectado en navegador. Intentando vía canal de enlace seguro...";
+        try {
+          const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+          const res = await fetch(proxyUrl);
+          if (res.ok) {
+            rawText = await res.text();
+            fetchSuccess = true;
+          } else {
+            throw new Error(`HTTP ${res.status}`);
+          }
+        } catch (proxyErr) {
+          console.warn("Proxy 1 falló, intentando proxy alternativo...", proxyErr);
+          try {
+            const proxyUrl2 = 'https://corsproxy.io/?url=' + encodeURIComponent(url);
+            const res2 = await fetch(proxyUrl2);
+            if (res2.ok) {
+              rawText = await res2.text();
+              fetchSuccess = true;
+            }
+          } catch (proxyErr2) {
+            console.error("Todos los canales fallaron:", proxyErr2);
+          }
+        }
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Ejecutar';
+      lucide.createIcons();
+
+      if (!fetchSuccess || !rawText) {
+        feedback.className = "text-xs p-3 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 block";
+        feedback.innerHTML = `<strong>Error de conexión directa:</strong> No se pudo conectar directamente desde el navegador (restricción CORS del servidor). Puedes copiar y pegar la respuesta en el campo inferior y hacer clic en <em>Guardar Catálogo</em>.`;
+        return;
+      }
+
+      const items = parseProductJsonOrNdjson(rawText);
+      if (!items || items.length === 0) {
+        feedback.className = "text-xs p-3 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 block";
+        feedback.textContent = "Se descargó la respuesta pero no se encontraron productos en formato JSON válido.";
+        return;
+      }
+
+      saveProductMappingFromItems(items);
+    }
+
+    function savePastedJson() {
+      const raw = document.getElementById('api-json-input').value.trim();
+      const feedback = document.getElementById('api-sync-feedback');
+      if (!raw) return;
+
+      const items = parseProductJsonOrNdjson(raw);
+      if (!items || items.length === 0) {
+        feedback.className = "text-xs p-3 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 block";
+        feedback.textContent = "No se pudieron extraer productos del texto ingresado. Asegúrate de pegar JSON o líneas NDJSON.";
+        return;
+      }
+      saveProductMappingFromItems(items);
+    }
+
+    function saveProductMappingFromItems(items) {
+      const feedback = document.getElementById('api-sync-feedback');
+      let mapped = 0;
+
+      items.forEach(item => {
+        const cod = item.pro_codigo || item.codigo || item.sku || item.cod;
+        let cat = item.det_catego || item.categoria || item.cat;
+        if ((cat === undefined || cat === null || cat === '') && item.pro_jerarquias && Array.isArray(item.pro_jerarquias) && item.pro_jerarquias.length > 0) {
+          cat = item.pro_jerarquias[0].det_catego;
+        }
+        if (cod && cat !== undefined && cat !== null && String(cat).trim() !== '') {
+          productCategoryMap[String(cod).trim()] = String(cat).trim();
+          mapped++;
+        }
+      });
+
+      localStorage.setItem('dhc_product_category_map', JSON.stringify(productCategoryMap));
+      updateApiStatusPill();
+
+      feedback.className = "text-xs p-3 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 block";
+      feedback.textContent = `¡Éxito! Se procesaron y guardaron ${mapped.toLocaleString()} asociaciones de producto (pro_codigo) a categoría (det_catego).`;
+
+      // Si ya hay resumen TXT activo, refrescar el desglose por categorías
+      if (txtVendorSummary.length > 0) {
+        renderTxtCategorySummary();
+      }
+
+      setTimeout(closeApiModal, 1800);
+    }
+
+    function switchTab(tab) {
+      const tabs = ['txt', 'cxc', 'comisiones'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const sec = document.getElementById(`tab-${t}`);
+        if (t === tab) {
+          btn.className = "tab-active py-2.5 px-3 text-xs sm:text-sm rounded-t-lg flex items-center gap-1.5 border-b-2 font-medium transition-colors whitespace-nowrap";
+          sec.classList.remove('hidden');
+        } else {
+          btn.className = "text-slate-500 hover:text-slate-700 py-2.5 px-3 text-xs sm:text-sm rounded-t-lg flex items-center gap-1.5 border-b-2 border-transparent font-medium transition-colors whitespace-nowrap";
+          sec.classList.add('hidden');
+        }
+      });
+      lucide.createIcons();
+    }
+
+    const fmtCRC = (num) => new Intl.NumberFormat('es-CR', { style: 'currency', currency: 'CRC', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(num || 0));
+
+    function parseHTMLTable(htmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
+      const rows = Array.from(doc.querySelectorAll('tr'));
+      return rows.map(r => Array.from(r.querySelectorAll('th, td')).map(cell => cell.textContent.trim()));
+    }
+
+    // ==========================================
+    // TAB: CONSOLIDADO TXT LOGIC
+    // ==========================================
+    function handleFileTXT(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        processRawTxt(text);
+      };
+      reader.readAsText(file, 'latin1');
+    }
+
+    function processRawTxt(text) {
+      const lines = text.split('\n');
+      const vendorMap = {};
+      const categoryMap = {};
+      const vendorCatMap = {};
+      let totalN = 0;
+      let totalM = 0;
+      let validLines = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split('|');
+        if (parts.length > 13) {
+          validLines++;
+          const cod = parts[6].trim();
+          const nombre = parts[7].trim();
+          const pCod = parts[8] ? parts[8].trim() : '';
+          const valM = parseFloat(parts[12].trim()) || 0;
+          const valN = parseFloat(parts[13].trim()) || 0;
+
+          // Agrupación por Vendedor
+          const vKey = cod || 'OTRO';
+          if (!vendorMap[vKey]) {
+            vendorMap[vKey] = { codigo: cod, nombre, count: 0, totalM: 0, totalN: 0 };
+          }
+          vendorMap[vKey].count++;
+          vendorMap[vKey].totalM += valM;
+          vendorMap[vKey].totalN += valN;
+
+          // Agrupación por Categoría (usando productCategoryMap)
+          const catId = productCategoryMap[pCod] || 'OTRO';
+          const catName = CATEGORY_NAMES[catId] || (catId !== 'OTRO' ? `${catId} - Categoría ${catId}` : 'Sin Categoría / Desconocida');
+
+          // Mapa global de categorías
+          if (!categoryMap[catId]) {
+            categoryMap[catId] = { id: catId, nombre: catName, count: 0, totalM: 0, totalN: 0 };
+          }
+          categoryMap[catId].count++;
+          categoryMap[catId].totalM += valM;
+          categoryMap[catId].totalN += valN;
+
+          // Mapa Vendedor x Categoría
+          if (!vendorCatMap[vKey]) {
+            vendorCatMap[vKey] = { codigo: cod, nombre, categories: {} };
+          }
+          if (!vendorCatMap[vKey].categories[catId]) {
+            vendorCatMap[vKey].categories[catId] = { id: catId, nombre: catName, count: 0, totalM: 0, totalN: 0 };
+          }
+          vendorCatMap[vKey].categories[catId].count++;
+          vendorCatMap[vKey].categories[catId].totalM += valM;
+          vendorCatMap[vKey].categories[catId].totalN += valN;
+
+          totalM += valM;
+          totalN += valN;
+        }
+      }
+
+      txtVendorSummary = Object.values(vendorMap).sort((a,b) => b.totalN - a.totalN);
+      txtCategorySummary = Object.values(categoryMap).sort((a,b) => b.totalN - a.totalN);
+      txtVendorCategoryMap = vendorCatMap;
+
+      renderTxtSummary(totalN, totalM, validLines);
+      populateTxtCatVendorFilter();
+      renderTxtCategorySummary();
+    }
+
+    function renderTxtSummary(totalN, totalM, validLines) {
+      document.getElementById('txt-kpi-col-n').textContent = fmtCRC(totalN);
+      document.getElementById('txt-kpi-col-m').textContent = fmtCRC(totalM);
+      document.getElementById('txt-kpi-lineas').textContent = validLines.toLocaleString();
+
+      const tbody = document.getElementById('txt-vendedores-tbody');
+      tbody.innerHTML = '';
+
+      txtVendorSummary.forEach(v => {
+        const pct = totalN > 0 ? ((v.totalN / totalN) * 100).toFixed(2) : '0';
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="p-3 font-semibold text-blue-700">${v.codigo}</td>
+          <td class="p-3 font-sans font-bold text-slate-800">${v.nombre}</td>
+          <td class="p-3 text-right text-slate-600">${v.count.toLocaleString()}</td>
+          <td class="p-3 text-right font-medium text-slate-700">${fmtCRC(v.totalM)}</td>
+          <td class="p-3 text-right font-extrabold text-blue-900 bg-blue-50/50">${fmtCRC(v.totalN)}</td>
+          <td class="p-3 text-right font-bold text-slate-700">${pct}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const trTotal = document.createElement('tr');
+      trTotal.className = "bg-slate-200 font-extrabold text-slate-900 border-t-2 border-b-2 border-slate-300";
+      trTotal.innerHTML = `
+        <td class="p-3 font-sans" colspan="2">TOTAL GENERAL</td>
+        <td class="p-3 text-right">${validLines.toLocaleString()}</td>
+        <td class="p-3 text-right">${fmtCRC(totalM)}</td>
+        <td class="p-3 text-right text-blue-900 bg-blue-100">${fmtCRC(totalN)}</td>
+        <td class="p-3 text-right">100.00%</td>
+      `;
+      tbody.appendChild(trTotal);
+    }
+
+    function populateTxtCatVendorFilter() {
+      const sel = document.getElementById('txt-cat-vendor-filter');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">Todos los Vendedores</option>';
+      txtVendorSummary.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.codigo;
+        opt.textContent = `${v.codigo} - ${v.nombre}`;
+        sel.appendChild(opt);
+      });
+    }
+
+    function renderTxtCategorySummary() {
+      const tbody = document.getElementById('txt-categorias-tbody');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      const selVendor = document.getElementById('txt-cat-vendor-filter') ? document.getElementById('txt-cat-vendor-filter').value : '';
+      let catList = [];
+      let totalN = 0;
+      let totalM = 0;
+      let totalLines = 0;
+
+      if (!selVendor) {
+        catList = [...txtCategorySummary];
+      } else if (txtVendorCategoryMap[selVendor]) {
+        catList = Object.values(txtVendorCategoryMap[selVendor].categories).sort((a,b) => b.totalN - a.totalN);
+      }
+
+      catList.forEach(c => {
+        totalN += c.totalN;
+        totalM += c.totalM;
+        totalLines += c.count;
+      });
+
+      if (catList.length === 0) {
+        const trEmpty = document.createElement('tr');
+        trEmpty.innerHTML = `<td colspan="6" class="p-6 text-center text-slate-400 italic">No hay categorías mapeadas aún. Sincroniza la API de Productos con el botón superior para vincularlas.</td>`;
+        tbody.appendChild(trEmpty);
+        return;
+      }
+
+      catList.forEach(c => {
+        const pct = totalN > 0 ? ((c.totalN / totalN) * 100).toFixed(2) : '0';
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-indigo-50/40 transition-colors";
+        tr.innerHTML = `
+          <td class="p-3 font-semibold text-indigo-700">${c.id}</td>
+          <td class="p-3 font-sans font-bold text-slate-800">${c.nombre}</td>
+          <td class="p-3 text-right text-slate-600">${c.count.toLocaleString()}</td>
+          <td class="p-3 text-right font-medium text-slate-700">${fmtCRC(c.totalM)}</td>
+          <td class="p-3 text-right font-extrabold text-indigo-900 bg-indigo-50/50">${fmtCRC(c.totalN)}</td>
+          <td class="p-3 text-right font-bold text-slate-700">${pct}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const trTotal = document.createElement('tr');
+      trTotal.className = "bg-indigo-100 font-extrabold text-indigo-950 border-t-2 border-b-2 border-indigo-200";
+      trTotal.innerHTML = `
+        <td class="p-3 font-sans" colspan="2">TOTAL ${selVendor ? `(${selVendor})` : 'GENERAL CATEGORÍAS'}</td>
+        <td class="p-3 text-right">${totalLines.toLocaleString()}</td>
+        <td class="p-3 text-right">${fmtCRC(totalM)}</td>
+        <td class="p-3 text-right text-indigo-950 bg-indigo-200/60">${fmtCRC(totalN)}</td>
+        <td class="p-3 text-right">100.00%</td>
+      `;
+      tbody.appendChild(trTotal);
+    }
+
+    function exportTxtCatExcel() {
+      const selVendor = document.getElementById('txt-cat-vendor-filter') ? document.getElementById('txt-cat-vendor-filter').value : '';
+      let catList = [];
+      let totalN = 0;
+      let totalM = 0;
+      let totalLines = 0;
+
+      if (!selVendor) {
+        catList = [...txtCategorySummary];
+      } else if (txtVendorCategoryMap[selVendor]) {
+        catList = Object.values(txtVendorCategoryMap[selVendor].categories).sort((a,b) => b.totalN - a.totalN);
+      }
+
+      catList.forEach(c => {
+        totalN += c.totalN;
+        totalM += c.totalM;
+        totalLines += c.count;
+      });
+
+      const rows = catList.map(c => ({
+        'ID Categoría': c.id,
+        'Categoría': c.nombre,
+        'Líneas': c.count,
+        'Subtotal Columna M': c.totalM,
+        'Total Columna N (Con Impuesto)': c.totalN,
+        '% Participación': totalN > 0 ? ((c.totalN / totalN) * 100).toFixed(2) + '%' : '0%'
+      }));
+
+      rows.push({
+        'ID Categoría': 'TOTAL',
+        'Categoría': selVendor ? `TOTAL ${selVendor}` : 'TOTAL GENERAL',
+        'Líneas': totalLines,
+        'Subtotal Columna M': totalM,
+        'Total Columna N (Con Impuesto)': totalN,
+        '% Participación': '100.00%'
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Categorias_TXT");
+      XLSX.writeFile(wb, `Ventas_Categorias_${selVendor || 'General'}_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    function clearTxtData() {
+      txtVendorSummary = [];
+      txtCategorySummary = [];
+      txtVendorCategoryMap = {};
+      const fileInput = document.getElementById('file-txt');
+      if (fileInput) fileInput.value = '';
+      document.getElementById('txt-kpi-col-n').textContent = '₡0';
+      document.getElementById('txt-kpi-col-m').textContent = '₡0';
+      document.getElementById('txt-kpi-lineas').textContent = '0';
+      document.getElementById('txt-vendedores-tbody').innerHTML = '';
+      const catTbody = document.getElementById('txt-categorias-tbody');
+      if (catTbody) catTbody.innerHTML = '';
+    }
+
+    function loadActualTxtData() {
+      txtVendorSummary = [
+        { codigo: 'DHC4', nombre: 'DIEGO AGUILAR PORRAS', count: 7458, totalM: 38147383.31, totalN: 39998108.35 },
+        { codigo: 'DHC3', nombre: 'OSCAR CALDERON ARROYO', count: 6890, totalM: 31646061.12, totalN: 33307547.37 },
+        { codigo: 'DHC5', nombre: 'MILTON BRENES RETANA', count: 5930, totalM: 29558253.54, totalN: 30337859.27 },
+        { codigo: 'DHC1', nombre: 'WAGNER CASTRO BARRANTES', count: 680, totalM: 7149928.48, totalN: 7814876.22 },
+        { codigo: 'DHC11', nombre: 'VICTOR CASTRO CARRERA', count: 3, totalM: 17845.71, totalN: 15774.46 }
+      ];
+
+      txtCategorySummary = [
+        { id: "4", nombre: "4 - CULINARIOS", count: 9991, totalM: 55236517.78, totalN: 57691369.12 },
+        { id: "18", nombre: "18 - Purina", count: 4183, totalM: 21298864.69, totalN: 22600275.58 },
+        { id: "5", nombre: "5 - LACTEOS", count: 2419, totalM: 11309036.31, totalN: 11682435.16 },
+        { id: "8", nombre: "8 - NUTRICION", count: 1482, totalM: 7711918.23, totalN: 8063947.93 },
+        { id: "6", nombre: "6 - MALHER", count: 987, totalM: 4493430.33, totalN: 4728709.70 },
+        { id: "1", nombre: "1 - CAFE Y BEBIDAS", count: 1076, totalM: 4184452.69, totalN: 4360593.46 },
+        { id: "3", nombre: "3 - CPW", count: 400, totalM: 1371887.37, totalN: 1414152.54 },
+        { id: "2", nombre: "2 - CONFITERIA", count: 375, totalM: 760984.77, totalN: 772712.64 },
+        { id: "19", nombre: "19 - CHOCO + CEREAL", count: 40, totalM: 151938.26, totalN: 159504.55 },
+        { id: "OTRO", nombre: "OTRO - Desconocida", count: 8, totalM: 441.72, totalN: 464.97 }
+      ];
+
+      renderTxtSummary(111474165.66, 106519472.16, 20961);
+      populateTxtCatVendorFilter();
+      renderTxtCategorySummary();
+    }
+
+    function exportTxtSummaryExcel() {
+      const rows = txtVendorSummary.map(v => ({
+        'Código': v.codigo,
+        'Vendedor': v.nombre,
+        'Líneas': v.count,
+        'Subtotal Columna M': v.totalM,
+        'Total Columna N (Con Impuesto)': v.totalN,
+        '% Participación': ((v.totalN / 111474165.66) * 100).toFixed(2) + '%'
+      }));
+      rows.push({
+        'Código': 'TOTAL',
+        'Vendedor': 'GENERAL',
+        'Líneas': 20961,
+        'Subtotal Columna M': 106519472.16,
+        'Total Columna N (Con Impuesto)': 111474165.66,
+        '% Participación': '100.00%'
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Consolidado_TXT");
+      XLSX.writeFile(wb, `Consolidado_Ventas_TXT_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    // ==========================================
+    // COMISIONES LOGIC & RECALCULATION
+    // ==========================================
+    function handleFileComisiones(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        let rows = [];
+        if (text.includes('<html') || text.includes('<table')) {
+          rows = parseHTMLTable(text);
+        } else {
+          const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        }
+        processComisionesRows(rows);
+      };
+      reader.readAsText(file, 'latin1');
+    }
+
+    function processComisionesRows(rows) {
+      if (!rows || rows.length < 2) return;
+      comisionesData = [];
+      const vendedoresSet = new Set();
+      let currentVendedor = '';
+
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || r.length < 3) continue;
+
+        if (r[0] && r[0].trim() !== '') {
+          currentVendedor = r[0].trim();
+        }
+
+        const categoria = (r[1] || '').trim();
+        const isSubtotal = categoria.toLowerCase().includes('sub total') || categoria.toLowerCase().includes('total');
+
+        const venta = parseFloat((r[2] || '0').replace(/,/g, '')) || 0;
+        const ventaBruta = parseFloat((r[3] || '0').replace(/,/g, '')) || 0;
+        const devolucion = parseFloat((r[4] || '0').replace(/,/g, '')) || 0;
+        const presupuesto = parseFloat((r[5] || '0').replace(/,/g, '')) || 0;
+        const ejecucion = parseFloat((r[6] || '0').replace(/,/g, '')) || 0;
+        const sku = parseFloat((r[7] || '0').replace(/,/g, '')) || 0;
+        const unidadAlterna = parseFloat((r[8] || '0').replace(/,/g, '')) || 0;
+        const cantNeta = parseFloat((r[9] || '0').replace(/,/g, '')) || 0;
+
+        vtaCatRawData.push({
+          vendedor: currentVendedor,
+          categoria,
+          isSubtotal,
+          venta,
+          ventaBruta,
+          devolucion,
+          presupuesto,
+          ejecucion,
+          sku,
+          unidadAlterna,
+          cantNeta
+        });
+
+        if (!isSubtotal && currentVendedor && (venta > 0 || presupuesto > 0)) {
+          vendedoresSet.add(currentVendedor);
+          comisionesData.push({
+            id: i,
+            vendedor: currentVendedor,
+            categoria: categoria || 'General',
+            venta,
+            presupuesto
+          });
+        }
+      }
+
+      const selCom = document.getElementById('com-vendedor-filter');
+            selCom.innerHTML = '<option value="">Todos los Vendedores</option>';
+
+      Array.from(vendedoresSet).sort().forEach(v => {
+        const opt1 = document.createElement('option');
+        opt1.value = v;
+        opt1.textContent = v;
+        selCom.appendChild(opt1);
+
+      });
+
+      renderComisionesTable();
+    }
+
+    function getRuleForCategory(vendedor, categoria) {
+      if (vendedor.includes('WAGNER') && categoria.toUpperCase().includes('PURINA')) {
+        return { rate: 1.0, minExec: 90.0, active: true };
+      }
+
+      for (const [key, rule] of Object.entries(categoryRules)) {
+        if (categoria.toUpperCase().includes(key.toUpperCase())) {
+          return rule;
+        }
+      }
+      return { rate: 2.0, minExec: 80.0, active: true };
+    }
+
+    function renderComisionesTable() {
+      const tbody = document.getElementById('comisiones-tbody');
+      tbody.innerHTML = '';
+
+      const vendedorFilter = document.getElementById('com-vendedor-filter').value;
+
+      const grouped = {};
+      comisionesData.forEach(item => {
+        if (!vendedorFilter || item.vendedor === vendedorFilter) {
+          if (!grouped[item.vendedor]) grouped[item.vendedor] = [];
+          grouped[item.vendedor].push(item);
+        }
+      });
+
+      let grandTotalVentas = 0;
+      let grandTotalPresupuesto = 0;
+      let grandTotalComisionBruta = 0;
+      let grandTotalDeducciones = 0;
+      let grandTotalComisionNeta = 0;
+
+      for (const [vendedor, items] of Object.entries(grouped)) {
+        let subVentas = 0;
+        let subPresupuesto = 0;
+        let subComisionBruta = 0;
+
+        items.forEach(item => {
+          const ejecucionReal = item.presupuesto > 0 ? ((item.venta / item.presupuesto) * 100) : (item.venta > 0 ? 100 : 0);
+          const rule = getRuleForCategory(item.vendedor, item.categoria);
+          const qualifies = rule.active && (ejecucionReal >= rule.minExec);
+          const comisionBruta = qualifies ? Math.round(item.venta * rule.rate / 100) : 0;
+
+          subVentas += item.venta;
+          subPresupuesto += item.presupuesto;
+          subComisionBruta += comisionBruta;
+
+          const tr = document.createElement('tr');
+          tr.className = "hover:bg-slate-50 transition-colors";
+          tr.innerHTML = `
+            <td class="p-3 font-semibold text-slate-800 font-sans">${item.vendedor}</td>
+            <td class="p-3 text-slate-700 font-sans">${item.categoria}</td>
+            <td class="p-3 text-right font-bold text-slate-900">${fmtCRC(item.venta)}</td>
+            <td class="p-3 text-right text-slate-600">${fmtCRC(item.presupuesto)}</td>
+            <td class="p-3 text-right ${ejecucionReal >= rule.minExec ? 'text-emerald-700 font-bold' : 'text-slate-500'}">
+              ${ejecucionReal > 0 ? ejecucionReal.toFixed(2) + '%' : '-'}
+            </td>
+            <td class="p-3 text-center font-bold ${qualifies ? 'text-blue-700' : 'text-slate-400'}">
+              ${rule.rate.toFixed(1)}%
+            </td>
+            <td class="p-3 text-right font-bold ${comisionBruta > 0 ? 'text-emerald-700' : 'text-slate-300'}">
+              ${comisionBruta > 0 ? fmtCRC(comisionBruta) : '-'}
+            </td>
+            <td class="p-3 text-right text-slate-400">-</td>
+            <td class="p-3 text-right font-semibold text-slate-400 bg-slate-50/50">-</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        const subEjecucion = subPresupuesto > 0 ? ((subVentas / subPresupuesto) * 100) : 0;
+        const deduccion = vendedorDeductions[vendedor] || 0;
+        const subComisionNeta = Math.max(0, subComisionBruta - deduccion);
+
+        grandTotalVentas += subVentas;
+        grandTotalPresupuesto += subPresupuesto;
+        grandTotalComisionBruta += subComisionBruta;
+        grandTotalDeducciones += deduccion;
+        grandTotalComisionNeta += subComisionNeta;
+
+        const subTr = document.createElement('tr');
+        subTr.className = "bg-slate-200 font-bold text-slate-900 border-t-2 border-b-2 border-slate-300";
+        subTr.innerHTML = `
+          <td class="p-3 font-sans">Sub Total</td>
+          <td class="p-3 font-sans text-xs text-slate-600">${vendedor}</td>
+          <td class="p-3 text-right">${fmtCRC(subVentas)}</td>
+          <td class="p-3 text-right">${fmtCRC(subPresupuesto)}</td>
+          <td class="p-3 text-right ${subEjecucion >= 100 ? 'text-emerald-800' : 'text-slate-800'}">${subEjecucion.toFixed(2)}%</td>
+          <td class="p-3 text-center">-</td>
+          <td class="p-3 text-right text-emerald-800">${fmtCRC(subComisionBruta)}</td>
+          <td class="p-3 text-right">
+            <input type="number" value="${deduccion}" 
+                   class="w-20 text-right font-bold text-rose-700 border border-slate-400 rounded px-1.5 py-0.5 text-xs bg-white" 
+                   onchange="updateVendedorDeduction('${vendedor}', this.value)" title="Deducción de comisiones (₡)">
+          </td>
+          <td class="p-3 text-right font-extrabold text-indigo-900 bg-indigo-100/70">${fmtCRC(subComisionNeta)}</td>
+        `;
+        tbody.appendChild(subTr);
+      }
+
+      document.getElementById('com-kpi-ventas').textContent = fmtCRC(grandTotalVentas);
+      document.getElementById('com-kpi-presupuesto').textContent = fmtCRC(grandTotalPresupuesto);
+      const globalEjec = grandTotalPresupuesto > 0 ? ((grandTotalVentas / grandTotalPresupuesto) * 100).toFixed(2) : 0;
+      document.getElementById('com-kpi-ejecucion').textContent = `Ejecución Global: ${globalEjec}%`;
+      document.getElementById('com-kpi-comision-bruta').textContent = fmtCRC(grandTotalComisionBruta);
+      document.getElementById('com-kpi-comision-neta').textContent = fmtCRC(grandTotalComisionNeta);
+      document.getElementById('com-kpi-deducciones').textContent = `Deducciones Totales: ${fmtCRC(grandTotalDeducciones)}`;
+    }
+
+    function updateVendedorDeduction(vendedor, value) {
+      vendedorDeductions[vendedor] = parseFloat(value) || 0;
+      renderComisionesTable();
+    }
+
+    function clearComisionesData() {
+      comisionesData = [];
+      const fileInput = document.getElementById('file-comisiones');
+      if (fileInput) fileInput.value = '';
+      document.getElementById('com-vendedor-filter').innerHTML = '<option value="">Todos los Vendedores</option>';
+      renderComisionesTable();
+    }
+
+    
+
+    // ==========================================
+    // CXC LOGIC
+    // ==========================================
+    function handleFileCXC(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const text = e.target.result;
+        let rows = [];
+        if (text.includes('<html') || text.includes('<table')) {
+          rows = parseHTMLTable(text);
+        } else {
+          const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+        }
+        processCXCRows(rows);
+      };
+      reader.readAsText(file, 'latin1');
+    }
+
+    function processCXCRows(rows) {
+      if (!rows || rows.length < 2) return;
+      cxcData = [];
+      const asesoresSet = new Set();
+
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r || r.length < 5) continue;
+        
+        const cond = (r[4] || '').trim();
+        if (!cond.toLowerCase().includes('cred')) {
+          continue;
+        }
+
+        const codigo = r[0] || '';
+        const cliente = r[1] || '';
+        const establecimiento = r[2] || cliente;
+        const factura = r[3] || '';
+        const fecha = r[5] || '';
+        const tipoDoc = r[r.length - 1] || 'FC';
+        const asesor = r[r.length - 2] || 'SIN ASESOR';
+
+        let total = 0;
+        for (let j = 6; j < r.length - 2; j++) {
+          const val = parseFloat((r[j] || '').replace(/,/g, '')) || 0;
+          if (val !== 0) {
+            total = val;
+            break;
+          }
+        }
+
+        if (total !== 0 || factura) {
+          if (asesor) asesoresSet.add(asesor);
+          cxcData.push({
+            codigo,
+            cliente,
+            establecimiento,
+            factura,
+            condicion: cond,
+            fecha,
+            total,
+            asesor,
+            tipoDoc
+          });
+        }
+      }
+
+      const sel = document.getElementById('cxc-asesor-filter');
+      sel.innerHTML = '<option value="">Todos los Asesores</option>';
+      Array.from(asesoresSet).sort().forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        sel.appendChild(opt);
+      });
+
+      renderCXC(cxcData);
+    }
+
+    function renderCXC(data) {
+      const tbody = document.getElementById('cxc-tbody');
+      tbody.innerHTML = '';
+
+      let totalMonto = 0;
+      const asesoresConCartera = new Set();
+
+      data.forEach(item => {
+        totalMonto += item.total;
+        if (item.asesor) asesoresConCartera.add(item.asesor);
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50 transition-colors";
+        tr.innerHTML = `
+          <td class="p-3 text-slate-500">${item.codigo}</td>
+          <td class="p-3 font-semibold text-slate-900 font-sans max-w-[220px] truncate" title="${item.cliente}">${item.cliente}</td>
+          <td class="p-3 font-sans text-slate-600 max-w-[200px] truncate" title="${item.establecimiento}">${item.establecimiento}</td>
+          <td class="p-3 font-semibold text-blue-600">${item.factura}</td>
+          <td class="p-3 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              ${item.condicion}
+            </span>
+          </td>
+          <td class="p-3 text-center text-slate-500">${item.fecha}</td>
+          <td class="p-3 text-right font-bold text-slate-900">${fmtCRC(item.total)}</td>
+          <td class="p-3 font-sans text-slate-700 text-xs">${item.asesor}</td>
+          <td class="p-3 text-center">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${item.tipoDoc === 'FC' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+              ${item.tipoDoc}
+            </span>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('cxc-total').textContent = fmtCRC(totalMonto);
+      document.getElementById('cxc-count').textContent = `${data.length} facturas de crédito`;
+      const promedio = data.length > 0 ? (totalMonto / data.length) : 0;
+      document.getElementById('cxc-promedio').textContent = fmtCRC(promedio);
+      document.getElementById('cxc-total-asesores').textContent = asesoresConCartera.size;
+    }
+
+    function filterCXCTable() {
+      const q = document.getElementById('cxc-search').value.toLowerCase();
+      const asesor = document.getElementById('cxc-asesor-filter').value;
+      const filtered = cxcData.filter(d => {
+        const matchesQ = !q || d.cliente.toLowerCase().includes(q) || d.factura.toLowerCase().includes(q) || d.codigo.includes(q);
+        const matchesAsesor = !asesor || d.asesor === asesor;
+        return matchesQ && matchesAsesor;
+      });
+      renderCXC(filtered);
+    }
+
+    function clearCXCData() {
+      cxcData = [];
+      const fileInput = document.getElementById('file-cxc');
+      if (fileInput) fileInput.value = '';
+      document.getElementById('cxc-asesor-filter').innerHTML = '<option value="">Todos los Asesores</option>';
+      document.getElementById('cxc-total').textContent = '₡0';
+      document.getElementById('cxc-count').textContent = '0 facturas';
+      document.getElementById('cxc-promedio').textContent = '₡0';
+      document.getElementById('cxc-total-asesores').textContent = '0';
+      document.getElementById('cxc-tbody').innerHTML = '';
+    }
+
+    function loadSampleCXC() {
+      cxcData = [
+        { codigo: '1042', cliente: 'CODESUR S.A.DANIEL FLORES FACTURA', establecimiento: 'CODESUR S.A.DANIEL FLORES FACTURA', factura: '001000010153355', condicion: 'Credito', fecha: '2026-10-15', total: 585029.3958, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1042', cliente: 'CODESUR S.A.DANIEL FLORES FACTURA', establecimiento: 'CODESUR S.A.DANIEL FLORES FACTURA', factura: '001000010153938', condicion: 'Credito', fecha: '2026-10-29', total: 297615.9054, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1043', cliente: 'CODESUR S.A.(Quepos) /Factura', establecimiento: 'CODESUR S.A.(Quepos)', factura: '001000010153353', condicion: 'Credito', fecha: '2026-10-16', total: 342806.2084, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1043', cliente: 'CODESUR S.A.(Quepos) /Factura', establecimiento: 'CODESUR S.A.(Quepos)', factura: '001000010153937', condicion: 'Credito', fecha: '2026-11-03', total: 31137.60822, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1045', cliente: 'CODESUR. S.A.(BUENOS AIRES) /FACTURA', establecimiento: 'CODESUR. S.A.(BUENOS AIRES)', factura: '001000010153352', condicion: 'Credito', fecha: '2026-10-20', total: 30049.26175, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1045', cliente: 'CODESUR. S.A.(BUENOS AIRES) /FACTURA', establecimiento: 'CODESUR. S.A.(BUENOS AIRES)', factura: '001000010153936', condicion: 'Credito', fecha: '2026-11-03', total: 46262.67573, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1046', cliente: 'COOPEAGRI RL (DANIEL  FLORES) /FACTURA', establecimiento: 'COOPEAGRI RL DANIEL  FLORES', factura: '001000010153098', condicion: 'Credito', fecha: '2026-10-09', total: 1032624.863, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1046', cliente: 'COOPEAGRI RL (DANIEL  FLORES) /FACTURA', establecimiento: 'COOPEAGRI RL DANIEL  FLORES', factura: '001000010153408', condicion: 'Credito', fecha: '2026-10-16', total: 1721895.88, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1046', cliente: 'COOPEAGRI RL (DANIEL  FLORES) /FACTURA', establecimiento: 'COOPEAGRI RL DANIEL  FLORES', factura: '001000010153647', condicion: 'Credito', fecha: '2026-10-23', total: 1619231.266, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1046', cliente: 'COOPEAGRI RL (DANIEL  FLORES) /FACTURA', establecimiento: 'COOPEAGRI RL DANIEL  FLORES', factura: '001000010153943', condicion: 'Credito', fecha: '2026-11-01', total: 1203555.856, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1046', cliente: 'COOPEAGRI RL (DANIEL  FLORES) /FACTURA', establecimiento: 'COOPEAGRI RL DANIEL  FLORES', factura: '001000010154281', condicion: 'Credito', fecha: '2026-11-06', total: 1613411.687, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1680', cliente: 'CODESUR S.A (P.Z)', establecimiento: 'CODESUR S.A (P.Z)', factura: '001000010153378', condicion: 'Credito', fecha: '2026-10-16', total: 606690.6398, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1680', cliente: 'CODESUR S.A (P.Z)', establecimiento: 'CODESUR S.A (P.Z)', factura: '001000010153939', condicion: 'Credito', fecha: '2026-11-01', total: 562519.6251, asesor: 'WAGNER CASTRO BARRANTES', tipoDoc: 'FC' },
+        { codigo: '1042', cliente: 'CODESUR S.A.DANIEL FLORES FACTURA', establecimiento: 'CODESUR S.A.DANIEL FLORES FACTURA', factura: '001000010152195', condicion: 'Credito', fecha: '2026-09-17', total: 746200.8426, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1042', cliente: 'CODESUR S.A.DANIEL FLORES FACTURA', establecimiento: 'CODESUR S.A.DANIEL FLORES FACTURA', factura: '001000010152199', condicion: 'Credito', fecha: '2026-09-17', total: 192417.2102, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1042', cliente: 'CODESUR S.A.DANIEL FLORES FACTURA', establecimiento: 'CODESUR S.A.DANIEL FLORES FACTURA', factura: '001000010152762', condicion: 'Credito', fecha: '2026-10-01', total: 426143.2157, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1043', cliente: 'CODESUR S.A.(Quepos) /Factura', establecimiento: 'CODESUR S.A.(Quepos)', factura: '001000010152225', condicion: 'Credito', fecha: '2026-09-18', total: 409367.1267, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1043', cliente: 'CODESUR S.A.(Quepos) /Factura', establecimiento: 'CODESUR S.A.(Quepos)', factura: '001000010152758', condicion: 'Credito', fecha: '2026-10-02', total: 507137.6635, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1044', cliente: 'CODESUR S.A.(MAYOREO D.F) /FACTURA', establecimiento: 'CODESUR S.A.(MAYOREO D.F)', factura: '001000010152202', condicion: 'Credito', fecha: '2026-09-17', total: 167845.0743, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1044', cliente: 'CODESUR S.A.(MAYOREO D.F) /FACTURA', establecimiento: 'CODESUR S.A.(MAYOREO D.F)', factura: '001000010152763', condicion: 'Credito', fecha: '2026-10-01', total: 44969.96703, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1045', cliente: 'CODESUR. S.A.(BUENOS AIRES) /FACTURA', establecimiento: 'CODESUR. S.A.(BUENOS AIRES)', factura: '001000010152214', condicion: 'Credito', fecha: '2026-09-22', total: 360756.481, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1045', cliente: 'CODESUR. S.A.(BUENOS AIRES) /FACTURA', establecimiento: 'CODESUR. S.A.(BUENOS AIRES)', factura: '001000010152969', condicion: 'Credito', fecha: '2026-10-06', total: 78337.50312, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1046', cliente: 'COOPEAGRI RL (DANIEL  FLORES) /FACTURA', establecimiento: 'COOPEAGRI RL DANIEL  FLORES', factura: '001000010152784', condicion: 'Credito', fecha: '2026-10-02', total: 1711635.347, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1680', cliente: 'CODESUR S.A (P.Z)', establecimiento: 'CODESUR S.A (P.Z)', factura: '001000010152222', condicion: 'Credito', fecha: '2026-09-18', total: 927690.9071, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1680', cliente: 'CODESUR S.A (P.Z)', establecimiento: 'CODESUR S.A (P.Z)', factura: '001000010152785', condicion: 'Credito', fecha: '2026-10-02', total: 415803.1993, asesor: 'VICTOR CASTRO CARRERA', tipoDoc: 'FC' },
+        { codigo: '1013', cliente: 'SUPER JOSETH  EL PARQUE /FACTURA', establecimiento: 'SUPER JOSETH  EL PARQUE', factura: '001000010153636', condicion: 'Credito', fecha: '2026-10-23', total: 21412.64148, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1013', cliente: 'SUPER JOSETH  EL PARQUE /FACTURA', establecimiento: 'SUPER JOSETH  EL PARQUE', factura: '001000010154265', condicion: 'Credito', fecha: '2026-11-06', total: 19740.535, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1130', cliente: '3-102-915802 SOCIEDAD DE RESPONSABILIDAD LIMITADA /FACTURA', establecimiento: '3-102-915802 SOCIEDAD DE RESPONSABILIDAD LIMITADA', factura: '001000010153030', condicion: 'Credito', fecha: '2026-10-10', total: 1302386.342, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1249', cliente: 'M.SUPER 20/20. /FACTURA', establecimiento: 'M.SUPER 20/20.', factura: '001000010153916', condicion: 'Credito', fecha: '2026-10-29', total: 80089.82396, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1390', cliente: 'FARMACEUTICA Y PROYECTOS MANUEL ANTONIO S.A. /Factura', establecimiento: 'FARMACEUTICA Y PROYECTOS MANUEL ANTONIO S.A.', factura: '001000010153984', condicion: 'Credito', fecha: '2026-11-03', total: 7211.70525, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1390', cliente: 'FARMACEUTICA Y PROYECTOS MANUEL ANTONIO S.A. /Factura', establecimiento: 'FARMACEUTICA Y PROYECTOS MANUEL ANTONIO S.A.', factura: '001000010153985', condicion: 'Credito', fecha: '2026-11-03', total: 33826.09798, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1393', cliente: 'GRUPO INTERNACIONAL SMP SRL /Factura', establecimiento: 'GRUPO INTERNACIONAL SMP SRL', factura: '001000010154241', condicion: 'Credito', fecha: '2026-11-05', total: 257365.3781, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1435', cliente: 'MAYRA MOYA ZUNIGA /Factura', establecimiento: 'MAYRA MOYA ZUNIGA', factura: '001000010152046', condicion: 'Credito', fecha: '2026-09-16', total: 320353.16, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1436', cliente: 'SUPER DIANA /Factura', establecimiento: 'SUPER DIANA', factura: '001000010153258', condicion: 'Credito', fecha: '2026-10-14', total: 168326.7918, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1447', cliente: 'PABLO JOSE MORALES PERAZA /FACTURA', establecimiento: 'PABLO JOSE MORALES PERAZA', factura: '001000010153863', condicion: 'Credito', fecha: '2026-10-28', total: 29058.60394, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' },
+        { codigo: '1447', cliente: 'PABLO JOSE MORALES PERAZA /FACTURA', establecimiento: 'PABLO JOSE MORALES PERAZA', factura: '001000010154166', condicion: 'Credito', fecha: '2026-11-03', total: 23800.46093, asesor: 'OSCAR  CALDERON ARROYO', tipoDoc: 'FC' }
+      ];
+      const sel = document.getElementById('cxc-asesor-filter');
+      sel.innerHTML = '<option value="">Todos los Asesores</option>';
+      ['WAGNER CASTRO BARRANTES', 'VICTOR CASTRO CARRERA', 'OSCAR  CALDERON ARROYO', 'DIEGO AGUILAR PORRAS', 'MILTON  BRENES RETANA'].forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a;
+        opt.textContent = a;
+        sel.appendChild(opt);
+      });
+      renderCXC(cxcData);
+    }
+
+    function exportCXCExcel() {
+      const q = document.getElementById('cxc-search').value.toLowerCase();
+      const asesor = document.getElementById('cxc-asesor-filter').value;
+      const dataToExport = cxcData.filter(d => {
+        const matchesQ = !q || d.cliente.toLowerCase().includes(q) || d.factura.toLowerCase().includes(q) || d.codigo.includes(q);
+        const matchesAsesor = !asesor || d.asesor === asesor;
+        return matchesQ && matchesAsesor;
+      }).map(d => ({
+        'Código': d.codigo,
+        'Cliente': d.cliente,
+        'Establecimiento': d.establecimiento,
+        'Factura': d.factura,
+        'Cond. Fact': d.condicion,
+        'Fecha origen': d.fecha,
+        'Saldo Factura': d.total,
+        'Vendedor': d.asesor,
+        'Tipo documento': d.tipoDoc
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "CXC_Credito");
+      XLSX.writeFile(wb, `CXC_Credito_DHC_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    function exportCXCPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('landscape');
+      doc.setFontSize(13);
+      doc.text("Distribuidora Hermanos Castro PZ - Cuentas por Cobrar (Solo Crédito)", 14, 14);
+      doc.setFontSize(8);
+      doc.text(`Generado: ${new Date().toLocaleString()}`, 14, 19);
+
+      const q = document.getElementById('cxc-search').value.toLowerCase();
+      const asesor = document.getElementById('cxc-asesor-filter').value;
+      const rows = cxcData.filter(d => {
+        const matchesQ = !q || d.cliente.toLowerCase().includes(q) || d.factura.toLowerCase().includes(q) || d.codigo.includes(q);
+        const matchesAsesor = !asesor || d.asesor === asesor;
+        return matchesQ && matchesAsesor;
+      }).map(d => [
+        d.codigo,
+        d.cliente.substring(0, 26),
+        d.establecimiento.substring(0, 24),
+        d.factura,
+        d.condicion,
+        d.fecha,
+        fmtCRC(d.total),
+        d.asesor.substring(0, 22),
+        d.tipoDoc
+      ]);
+
+      doc.autoTable({
+        head: [['Código', 'Cliente', 'Establecimiento', 'Factura', 'Cond. Fact', 'Fecha', 'Saldo Factura', 'Vendedor', 'Tipo']],
+        body: rows,
+        startY: 23,
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [37, 99, 235] }
+      });
+
+      doc.save(`CXC_Credito_DHC_${new Date().toISOString().slice(0,10)}.pdf`);
+    }
+
+    // Startup
+    window.addEventListener('DOMContentLoaded', () => {
+      loadActualTxtData();
+      updateApiStatusPill();
+    });
+  </script>
+</body>
+</html>
